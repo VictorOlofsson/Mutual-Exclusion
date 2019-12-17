@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import json
 
-SUPPORTED_MSG_TYPES = ["REPLY", "REQUEST", "DEAD", "INIT"] # Declares message types as a list 
+SUPPORTED_MSG_TYPES = ["REPLY", "REQUEST", "DEAD", "INIT", "ARE_YOU_THERE"] # Declares message types as a list 
 
 ### Enumerate class###
 class Enum(set):
