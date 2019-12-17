@@ -17,7 +17,9 @@ class node(object):
         
     def __init__(self, node_name, IP, PORT):
         self.seq_num = 0 
-        self.highest_seq_num = 0 
+        self.highest_seq_num = 0
+        self.nodes_highest_seq_num = {}
+        self.disposing = False
         self.nodes = {}
         self.info = {}
         self.lock = threading.Lock()
@@ -73,10 +75,11 @@ class node(object):
         if ((msg.type != Message.TYPE.INIT) and (msg.sender['NAME']  not in self.msg.nodes())):
             self.handle_unknown_node(args)  # Handle messages to nodes that is unknown/dead
         else: {
-            Message.TYPE.REPLY      : self.handle_reply_message,
-            Message.TYPE.REQUEST    : self.handle_request_message,
-            Message.TYPE.DEAD       : self.handle_dead_message,
-            Message.TYPE.INIT       : self.handle_init_message
+            Message.TYPE.REPLY              : self.handle_reply_message,
+            Message.TYPE.REQUEST            : self.handle_request_message,
+            Message.TYPE.DEAD               : self.handle_dead_message,
+            Message.TYPE.INIT               : self.handle_init_message,
+            Message.TYPE.HIGHEST_SEQ_NUM    : self.handle_highest_seq_num
         }[msg.type](args)
 
     # Handles unknown/dead nodes
@@ -202,7 +205,25 @@ class node(object):
     
     def send_message_to_node(self, args):
         pass
-    
+
+    def handle_highest_seq_num(self):
+        pass
+
+    def init(self, addr):
+        message = Message(Message.TYPE.INIT, self.info, {"ROLE":"NEW"})
+        self.msg_sender(addr,message.prepare())
+        self.listener_event.wait()
+        for node in self.nodes.keys():
+            message = Message(Message.TYPE.HIGHEST_SEQ_NUM, self.info,{"STATUS": "GET"})
+            self.send_message_to_node(node, message.prepare())
+        self.listener_event.wait()
+        highest_num = -1
+        for num in self.nodes_highest_seq_num:
+            if self.nodes_highest_seq_num[num] > highest_num: highest_num = self.nodes_highest_seq_num[num]
+        self.highest_seq_num = highest_num
+        return (self.init_done, self.init_status)
+
+
     def acquire(self):
         self.lock.acquire()
         if not self.init_done:
@@ -213,7 +234,6 @@ class node(object):
             return False
         
         #print "ACQUIRE"
-
         self.lock.acquire()
         self.requesting_cs = True
         self.seq_num = int(self.highest_seq_num) + 1
@@ -222,7 +242,7 @@ class node(object):
         if (self.outstanding_reply_count == 0):
             self.listening_event.set()
         
-        mess = Message(Message.TYPE>REQUEST,self.inf0,{"SEQNUM":self.seqnum})
+        mess = Message(Message.TYPE.REQUEST,self.info,{"SEQNUM":self.seqnum})
 
         for node in self.nodes.keys():
             self.awaiting_reply[node] = True
@@ -231,7 +251,7 @@ class node(object):
         for node in self.nodes.keys():
             try:
                 self.send_message_to_node(node, mess.prepare())
-            except socket.err, msg:
+            except socket.error as msg:
                 print("Error code: " + str(msg[0]) + ', Error message : ' + msg[1])
         print("RA-MUTEX:: Waiting for nodes Reply")
         self.timeoutTimer.cancel()
@@ -253,8 +273,18 @@ class node(object):
                 message = Message(Message.TYPE.REPLY,self.info, {})
                 try:
                     self.send_message_to_node(node, message.prepare())
-                except socket.error, msg:
+                except socket.error as msg:
                     print("Error code: " + str(msg[0]) + " , Error message: " + msg[1])
             return True
 
-    
+    def dispose(self):
+        self.disposing = True
+        if self.requesting_cs: self.release()
+        mess = Message(Message.TYPE.DEAD, self.info,{"STATUS": "REMOVE", "NODE": self.info["UNIQUENAME"]})
+        for node in self.nodes:
+            try:
+                self.send_message_to_node(node, mess.prepare())
+            except socket.error as msg:
+                print("Erroe code" + str(msg[0] + ', Errro Message : ' + msg[1]))
+        self.disposing = False
+        self.init_done = False
