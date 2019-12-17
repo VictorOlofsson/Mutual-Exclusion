@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import node as NODE
+from node import node
 import argparse
 import time
 
@@ -27,7 +27,8 @@ class RaTest(object):
         self.port = args.port
 
     def runTest(self):
-        test = NODE(self.name,self.addr, self.port)
+        test = node(self.name,self.addr, self.port)
+        
         #if (self.sponsor[0] != None ) and (self.sponsor[1] != None):
         #    print("Node ::" + self.name + "::INITIALIZATION")
         #    test.init(self.sponsor)
@@ -41,6 +42,7 @@ class RaTest(object):
             time.sleep(self.use_time)
             print("NODE::" + self.name + "::USING_DONE")
             print("NODE::" + self.name + "::RELEASING_RESOURCE")
+            print(test.nodes)
             #test.release()
         
 

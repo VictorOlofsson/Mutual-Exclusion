@@ -2,7 +2,6 @@
 
 import socket
 import threading
-from Ricart_Agrawala import ricart_agrawala as ra
 from message import Message
 import time
 
