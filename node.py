@@ -164,7 +164,7 @@ class RaTest(object):
         self.port = args.port
 
     def runTest(self):
-        test = ra.RA(self.name,self.addres, self.port)
+        test = ra.RA(self.name,self.addr, self.port)
         if (self.sponsor[0] != None ) and (self.sponsor[1] != None):
             print("Node ::" + self.name + "::INITIALIZATION")
             test.init(self.sponsor)
