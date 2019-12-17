@@ -24,6 +24,8 @@ class node(object):
         self.listener_event = threading.Event()
         self.outstanding_reply_count = 0
         self.requesting_cs = False
+        self.init_done = False
+        self.init_status = ""
         self.lock.acquire()
         self.info['IP'] = IP
         self.info['PORT'] = PORT
@@ -126,15 +128,133 @@ class node(object):
         #         self.second_timeout = threading.Timer(1.0, self.wait_for_i_am_here)
 
     
-    def handle_dead_message(self):
-        pass
+    def handle_dead_message(self, args):
+        print("RA-MUTEX::Net detected node falure::" + str(args[1]))
+        sender = args[0]
+        content = args[1]
+        if (content["STATUS"] == "REMOVE"):
+            self.delete_node(content["NODE"])
+        elif (content["STATUS"] == "RE_INIT"):
+            self.lock.acquire()
+            self.init_done = False
+            self.init_status = "RE_UNIT"
+            self.lock.release()
 
 
     def handle_init_message(self, args):
-        pass
+        sender = args[0]
+        content = args[1]
+        address = args[2]
+        if(content["ROLE"] == "NEW"):
+            print("RA-MUTEX::INCOMING-NODE-TO-INIT")
+            self.lock.aquire()
+            if(len(self.nodes) == 0): # Check if first in queue
+                self.init_done = True
+            self.aquire()
 
-    def delete_node(self):
-        pass
+            message = Message()
+            if((self.nodes.has_key(sender["UNIQUENAME"])) or (self.info["UNIQUENAME"] == sender["UNIQUENAME"])):
+                init_data = {"ROLE": "SPONSOR", "STATUS": "NOT UNIQUE"}
+                send_to_new = message.prepare(Message.TYPE.INIT, self.info, init_data)
+            else:
+                send_to_nodes = message.prepare(Message.TYPE.INIT, self.info, {"ROLE": "NODE", "NEWDATA": sender})
+                for node in self.nodes:
+                    self.send_message_to_node(node,send_to_nodes)
+                init_data = {"ROLE": "SPONSOR", "STATUS": "OK", "NODESDATA": self.nodes}
+                send_to_new = message.prepare(Message.TYPE.INIT, self.info, init_data)
+                self.nodes[sender["UNIQUENAME"]] = {"IP": sender["IP"], "PORT": sender["PORT"]}
+                self.msg_sender((sender["IP"],sender["PORT"]),send_to_new)
+                self.release()
+                print("RA-MUTEX::INIT-DONE")
+                self.lock.release()
+        elif content["ROLE"] == "NODE":
+             self.nodes[content["NEWDATA"]["UNIQUENAME"]] = { 'IP': content["NEWDATA"]['IP'], 'PORT': content["NEWDATA"]['PORT']}
+        elif content["ROLE"] == "SPONSOR":
+            self.init_status = content["STATUS"]
+            if (self.init_status == "OK"):
+                self.nodes = content["NODEDATA"]
+                self.nodes[sender["UNIQUENAME"]] = { 'IP' : sender['IP'], 'PORT': sender['PORT']}
+                self.init_done = True
+            else:
+                self.init_done = False
+        self.listener_event.set()
+        self.listener_event.clear()
+
+    def delete_node(self, node):
+        self.lock.acquire()
+        if self.nodes.has_key(node):
+            del self.nodes[node]
+        if self.reply_deferred.get(node):
+            del self.reply_deferred[node]
+        if self.awaiting_reply.get(node):
+            del self.awaiting_reply[node]
+        if self.requesting_cs:
+            if (self.outstanding_reply_count > 0):
+                self.outstanding_reply_count -= 1
+            if (self.outstanding_reply_count == 0):
+                self.listener_event.set()
+        self.lock.release()
+                
     
     def wait_for_im_here(self):
+        self.timeout_status = False
+        self.timeout_event.set()
+    
+    def send_message_to_node(self, args):
         pass
+    
+    def acquire(self):
+        self.lock.acquire()
+        if not self.init_done:
+            self.init.lock.release()
+            return False
+        if self.disposing:
+            self.lock.release()
+            return False
+        
+        #print "ACQUIRE"
+
+        self.lock.acquire()
+        self.requesting_cs = True
+        self.seq_num = int(self.highest_seq_num) + 1
+        self.outstanding_reply_count = len(self.nodes)
+        
+        if (self.outstanding_reply_count == 0):
+            self.listening_event.set()
+        
+        mess = Message(Message.TYPE>REQUEST,self.inf0,{"SEQNUM":self.seqnum})
+
+        for node in self.nodes.keys():
+            self.awaiting_reply[node] = True
+        self.lock.release()
+
+        for node in self.nodes.keys():
+            try:
+                self.send_message_to_node(node, mess.prepare())
+            except socket.err, msg:
+                print("Error code: " + str(msg[0]) + ', Error message : ' + msg[1])
+        print("RA-MUTEX:: Waiting for nodes Reply")
+        self.timeoutTimer.cancel()
+        self.timeoutTimer = threading.Timer(10.0, self.check_awaiting_nodes)
+        self.timeoutTimer.start()
+        self.listening_event.wait()
+        self.listening_event.clear()
+        self.lock.release()
+        self.timeoutTimer.cancel()
+        return True
+
+    def release(self):
+        if not self.init_done:
+            return False
+        self.requesting_cs = False
+        for node in self.nodes.keys():
+            if self.reply_deffered.get(node):
+                self.reply_deffered[node] = False
+                message = Message(Message.TYPE.REPLY,self.info, {})
+                try:
+                    self.send_message_to_node(node, message.prepare())
+                except socket.error, msg:
+                    print("Error code: " + str(msg[0]) + " , Error message: " + msg[1])
+            return True
+
+    

@@ -29,23 +29,21 @@ class RaTest(object):
     def runTest(self):
         test = node(self.name,self.addr, self.port)
         
-        #if (self.sponsor[0] != None ) and (self.sponsor[1] != None):
-        #    print("Node ::" + self.name + "::INITIALIZATION")
-        #    test.init(self.sponsor)
+        if (self.sponsor[0] != None ) and (self.sponsor[1] != None):
+            print("Node ::" + self.name + "::INITIALIZATION")
+            test.init(self.sponsor)
         print("NODE::" + self.name + "::READY")
         while(True):
             print("NODE::" + self.name + "::IDLE")
             time.sleep(self.wait_time)
             print("NODE::" + self.name + "::ACQUIRING_RESOURCE")
-            #test.acquire()
+            test.acquire()
             print("NODE::" + self.name + "::USING_RESOURCE")
             time.sleep(self.use_time)
             print("NODE::" + self.name + "::USING_DONE")
             print("NODE::" + self.name + "::RELEASING_RESOURCE")
             print(test.nodes)
-            #test.release()
-        
-
+            test.release()
 
 
 if __name__ == "__main__":
