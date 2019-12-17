@@ -169,6 +169,16 @@ class RaTest(object):
             print("Node ::" + self.name + "::INITIALIZATION")
             test.init(self.sponsor)
         print("NODE::" + self.name + "::READY")
+        while(True):
+            print("NODE::" + self.name + "::IDLE")
+            time.sleep(self.wait_time)
+            print("NODE::" + self.name + "::ACQUIRING_RESOURCE")
+            test.acquire()
+            print("NODE::" + self.name + "::USING_RESOURCE")
+            time.sleep(self.use_time)
+            print("NODE::" + self.name + "::USING_DONE")
+            print("NODE::" + self.name + "::RELEASING_RESOURCE")
+            test.release()
         
 
 
