@@ -2,6 +2,7 @@
 from node import node
 import argparse
 import time
+import sys
 
 APP_NAME = "Ra_Test"
 
@@ -33,16 +34,13 @@ class RaTest(object):
             print("Node ::" + self.name + "::INITIALIZATION")
             test.init(self.sponsor)
         print("NODE::" + self.name + "::READY")
-        while(True):
-            print("NODE::" + self.name + "::IDLE")
-            time.sleep(self.wait_time)
-            print("NODE::" + self.name + "::ACQUIRING_RESOURCE")
-            test.acquire()
-            print("NODE::" + self.name + "::USING_RESOURCE")
-            time.sleep(self.use_time)
-            print("NODE::" + self.name + "::USING_DONE")
-            print("NODE::" + self.name + "::RELEASING_RESOURCE")
-            test.release()
+        
+        time.sleep(self.wait_time)
+        test.acquire()
+        print(self.name)
+        time.sleep(2)
+        test.release()
+        time.sleep(10)
 
 
 if __name__ == "__main__":
