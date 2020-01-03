@@ -64,7 +64,7 @@ class node(object):
         self.listener_event.set()
         self.listener_event.clear() #put socket into listening mode 
         s.listen(5)
-        print('\nSocket is listening')
+        print('Socket is listening')
 
         while True:
             client, address = s.accept()

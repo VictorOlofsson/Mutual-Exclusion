@@ -20,19 +20,24 @@ def runTest():
     nodeB = node("Node_B","0.0.0.0", 5001)
     nodeC = node("Node_C","0.0.0.0", 5002)
 
+    
+    threadB = threading.Thread(target = programB, args=(nodeB, ))
+    threadC = threading.Thread(target = programC, args=(nodeC, ))
+    threadA = threading.Thread(target = programA, args=(nodeA, ))
+    threadB.start()
+    threadC.start()
+    threadA.start()
 
-    threadB = threading.Thread(target = programB)
-    threadC = threading.Thread(target = programC)
-    threadA = threading.Thread(target = programA)
+    quit()
 
-def programA(self, node):
+def programA(node):
     node.acquire()
     print("proc_a")
     time.sleep(2)
     node.release()
     time.sleep(10)
 
-def programB(self, node):
+def programB(node):
     time.sleep(5)
     node.acquire()
     print("proc_b")
@@ -40,7 +45,7 @@ def programB(self, node):
     node.release()
     time.sleep(10)
 
-def programC(self, node):
+def programC(node):
     time.sleep(6)
     node.acquire()
     print("proc_c")
