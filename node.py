@@ -59,12 +59,12 @@ class node(object):
         address, port = s.getsockname()
         self.info['IP'] = ("127.0.0.1" if address == "0.0.0.0" else address )
         self.info['PORT'] = port
-        print("Socket is bound to %s" % port)
+        #print("Socket is bound to %s" % port)
         self.lock.release()  #release process
         self.listener_event.set()
         self.listener_event.clear() #put socket into listening mode 
         s.listen(5)
-        print('Socket is listening')
+        #print('Socket is listening')
 
         while True:
             client, address = s.accept()
