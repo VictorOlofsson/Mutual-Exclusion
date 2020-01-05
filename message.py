@@ -38,7 +38,6 @@ class Message(object):
             self.__init__(msg_type,msg_sender,msg_content)
         else:
             raise Exception("Bad Parse Args")
-
         return json.dumps({"TYPE": self.type, "FROM": self.sender, "CONTENT": self.content})
 
     # Parse the messages using json sets values for type, sender and content

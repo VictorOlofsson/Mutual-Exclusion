@@ -33,7 +33,7 @@ class RaTest(object):
             print("Node ::" + self.name + "::INITIALIZATION")
             test.init(self.sponsor)
         print("NODE::" + self.name + "::READY")
-        while(True):
+        while True:
             print("NODE::" + self.name + "::IDLE")
             time.sleep(self.wait_time)
             print("NODE::" + self.name + "::ACQUIRING_RESOURCE")

@@ -3,15 +3,31 @@ from node import node
 import time
 
 
-def proc_B(node):
-    time.sleep(5)
-    node.acquire()
-    print("proc_b")
-    time.sleep(2)
-    node.release()
-    time.sleep(10)
+
+
+class proc_B(object):
+
+    def __init__(self):
+        self.name = "Node_B"
+        self.address = "127.0.0.1"
+        self.port = 5002
+
+        
+    def proc_b(self):
+        test_B = node(self.name, self.address, self.port)
+        time.sleep(3)
+        test_B.init((self.address, self.port))
+        print('starting init in B')
+        time.sleep(5)
+        test_B.acquire()
+        print("proc_b")
+        time.sleep(2)
+        print("releasing B")
+        test_B.release()
+        time.sleep(10)
+        print('waking')
 
 
 if __name__ == "__main__":
-    nodeB = node("Node_B","0.0.0.0", 5002)
-    proc_B(nodeB)
+    nodeB = proc_B()
+    nodeB.proc_b()

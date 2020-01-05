@@ -7,19 +7,13 @@ import threading
 
 
 
-# def __init__(self,args):
-#     self.use_time = args.use_time
-#     self.wait_time = args.wait_time
-#     self.name = args.name
-#     self.sponsor = (args.sponsor_addr, args.sponsor_port)
-#     self.addr = args.addr
-#     self.port = args.port
-
 def runTest():
     nodeA = node("Node_A","0.0.0.0", 5000)
     nodeB = node("Node_B","0.0.0.0", 5001)
     nodeC = node("Node_C","0.0.0.0", 5002)
-
+    nodeA.init(('127.0.0.1',5000))
+    nodeB.init(('127.0.0.1',5001))
+    nodeC.init(('127.0.0.1',5002))
     
     threadB = threading.Thread(target = programB, args=(nodeB, ))
     threadC = threading.Thread(target = programC, args=(nodeC, ))
