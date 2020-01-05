@@ -60,12 +60,12 @@ class node(object):
         address, port = s.getsockname()
         self.info['IP'] = ("127.0.0.1" if address == "0.0.0.0" else address )
         self.info['PORT'] = port
-        print("Socket is bound to %s" % port)
+        #print("Socket is bound to %s" % port)
         self.lock.release()  #release process
         self.listener_event.set()
         self.listener_event.clear() #put socket into listening mode 
-        s.listen(5)
-        print('Socket is listening')
+        s.listen(2)
+        #print("Socket is listening %s" % address)
 
         while True:
             client, address = s.accept()
@@ -78,9 +78,10 @@ class node(object):
         msg = Message()
         msg.parse(data)
         args = (msg.sender, msg.content, address)
-        if ((msg.type != Message.TYPE.INIT) and (msg.sender['UNIQUENAME']  not in self.msg.nodes())):
+        if ((msg.type != Message.TYPE.INIT) and (msg.sender['UNIQUENAME'] not in self.msg.nodes())):
             self.handle_unknown_node(args)  # Handle messages to nodes that is unknown/dead
-        else: {
+        else: 
+            {
             Message.TYPE.REPLY              : self.handle_reply_message,
             Message.TYPE.REQUEST            : self.handle_request_message,
             Message.TYPE.DEAD               : self.handle_dead_message,
@@ -88,7 +89,7 @@ class node(object):
             Message.TYPE.HIGHEST_SEQ_NUM    : self.handle_highest_seq_num,
             Message.TYPE.YES_I_AM_HERE      : self.handle_yes_i_am_here,
             Message.TYPE.ARE_YOU_THERE      : self.handle_are_you_there
-        }[msg.type](args)
+            }[msg.type](args)
 
     # Handles unknown/dead nodes
     def handle_unknown_node(self, args):
@@ -138,6 +139,7 @@ class node(object):
                 mess = Message(Message.TYPE.ARE_YOU_THERE,self.info,{})
                 self.send_message_to_node(node,mess.prepare())
                 self.second_timeout = threading.Timer(1.0, self.wait_for_i_am_here)
+                print('found node' + self.info)
                 self.second_timeout.start()
                 self.listener_event.wait()
                 self.listener_event.clear()
@@ -162,32 +164,32 @@ class node(object):
         content = args[1]
         address = args[2]
         if(content["ROLE"] == "NEW"):
-            print("RA-MUTEX::INCOMING-NODE-TO-INIT")
+            #print("RA-MUTEX::INCOMING-NODE-TO-INIT")
             self.init_lock.acquire()
             if(len(self.nodes) == 0): # Check if first in queue
                 self.init_done = True
             self.acquire()
-            
             message = Message()
             if((sender["UNIQUENAME"] in self.nodes) or (self.info["UNIQUENAME"] == sender["UNIQUENAME"])):
                 init_data = {"ROLE": "SPONSOR", "STATUS": "NOT UNIQUE"}
                 send_to_new = message.prepare(Message.TYPE.INIT, self.info, init_data)
             else:
                 send_to_nodes = message.prepare(Message.TYPE.INIT, self.info, {"ROLE": "NODE", "NEWDATA": sender})
+                print('role sponsor')
                 for node in self.nodes:
                     self.send_message_to_node(node,send_to_nodes)
                 init_data = {"ROLE": "SPONSOR", "STATUS": "OK", "NODESDATA": self.nodes}
                 send_to_new = message.prepare(Message.TYPE.INIT, self.info, init_data)
                 self.nodes[sender["UNIQUENAME"]] = {"IP": sender["IP"], "PORT": sender["PORT"]}
-                
-                self.msg_sender((sender['IP'],sender['PORT']),send_to_new)
-                
-                self.release()
-                print("RA-MUTEX::INIT-DONE")
-                self.init_lock.release()
+            
+            self.msg_sender((sender['IP'],sender['PORT']),send_to_new)
+            self.release()
+            #print("RA-MUTEX::INIT-DONE")
+            self.init_lock.release()
         elif content["ROLE"] == "NODE":
-             self.nodes[content["NEWDATA"]["UNIQUENAME"]] = { 'IP': content["NEWDATA"]['IP'], 'PORT': content["NEWDATA"]['PORT']}
+            self.nodes[content["NEWDATA"]["UNIQUENAME"]] = { 'IP': content["NEWDATA"]['IP'], 'PORT': content["NEWDATA"]['PORT']}
         elif content["ROLE"] == "SPONSOR":
+            #print("role sponsor")
             self.init_status = content["STATUS"]
             if (self.init_status == "OK"):
                 self.nodes = content["NODESDATA"]
@@ -195,8 +197,8 @@ class node(object):
                 self.init_done = True
             else:
                 self.init_done = False
-        self.listener_event.set()
-        self.listener_event.clear()
+            self.listener_event.set()
+            self.listener_event.clear()
 
     # Finished
     def delete_node(self, node):
@@ -279,18 +281,19 @@ class node(object):
 
     # Finished
     def acquire(self):
-        
         self.init_lock.acquire()
-        print("In acquire")
-        if not self.init_done:
+        if self.init_done != True:
             self.init_lock.release()
+            print("init not done")
             return False
         if self.disposing:
             self.init_lock.release()
+            print('disposing')
             return False
         
         self.lock.acquire()
         self.requesting_cs = True
+        print('critical section now true')
         self.seq_num = int(self.highest_seq_num) + 1
         self.outstanding_reply_count = len(self.nodes)
         
@@ -302,13 +305,12 @@ class node(object):
         for node in self.nodes.keys():
             self.awaiting_reply[node] = True
         self.lock.release()
-
         for node in self.nodes.keys():
             try:
                 self.send_message_to_node(node, mess.prepare())
             except socket.error as msg:
                 print("Error code: " + str(msg[0]) + ', Error message : ' + msg[1])
-        print("RA-MUTEX::Waiting for nodes Reply")
+        #print("RA-MUTEX::Waiting for nodes Reply")
         self.timeoutTimer.cancel()
         self.timeoutTimer = threading.Timer(10.0, self.check_waiting_nodes)
         self.timeoutTimer.start()
@@ -320,7 +322,7 @@ class node(object):
 
     # Finished
     def release(self):
-        if not self.init_done:
+        if self.init_done != True:
             return False
         self.requesting_cs = False
         for node in self.nodes.keys():
@@ -331,7 +333,7 @@ class node(object):
                     self.send_message_to_node(node, message.prepare())
                 except socket.error as msg:
                     print("Error code: " + str(msg[0]) + " , Error message: " + msg[1])
-            return True
+        return True
 
     # Finished
     def dispose(self):

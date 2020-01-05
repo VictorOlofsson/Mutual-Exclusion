@@ -12,16 +12,19 @@ class proc_C(object):
 
         
     def proc_c(self):
+        time.sleep(3)
+        #print('starting init C')
         test_C = node(self.name, self.address, self.port)
-        time.sleep(4)
-        test_C.init((self.address,self.port))
-        print('starting init C')
-        time.sleep(6)
-        test_C.acquire()
-        print("proc_c")
-        time.sleep(2)
-        print("releasing C")
-        test_C.release()
+
+
+        while True:
+            time.sleep(6)
+            #print("NODE::" + self.name + "::ACQUIRING_RESOURCE") 
+            test_C.acquire()
+            print("proc_c")
+            time.sleep(2)
+            #print("releasing C")
+            test_C.release()
 
 
 

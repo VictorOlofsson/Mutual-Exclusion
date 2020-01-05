@@ -14,18 +14,20 @@ class proc_B(object):
 
         
     def proc_b(self):
-        test_B = node(self.name, self.address, self.port)
-        time.sleep(3)
-        test_B.init((self.address, self.port))
-        print('starting init in B')
-        time.sleep(5)
-        test_B.acquire()
-        print("proc_b")
         time.sleep(2)
-        print("releasing B")
-        test_B.release()
-        time.sleep(10)
-        print('waking')
+        #print('starting init in B')
+        test_B = node(self.name, self.address, self.port)
+
+        while True: 
+            time.sleep(5)
+            #print("NODE::" + self.name + "::ACQUIRING_RESOURCE")
+            test_B.acquire()
+            print("proc_b")
+            time.sleep(2)
+            #print("releasing B")
+            test_B.release()
+            time.sleep(10)
+            #print('waking')
 
 
 if __name__ == "__main__":
