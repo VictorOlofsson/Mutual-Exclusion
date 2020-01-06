@@ -60,12 +60,12 @@ class node(object):
         address, port = s.getsockname()
         self.info['IP'] = ("127.0.0.1" if address == "0.0.0.0" else address )
         self.info['PORT'] = port
-        #print("Socket is bound to %s" % port)
+        print("Socket is bound to %s" % port)
         self.lock.release()  #release process
         self.listener_event.set()
         self.listener_event.clear() #put socket into listening mode 
         s.listen(2)
-        #print("Socket is listening %s" % address)
+        print("Socket is listening %s" % address)
 
         while True:
             client, address = s.accept()
@@ -79,6 +79,7 @@ class node(object):
         msg.parse(data)
         args = (msg.sender, msg.content, address)
         if ((msg.type != Message.TYPE.INIT) and (msg.sender['UNIQUENAME'] not in self.msg.nodes())):
+            print("unknown")
             self.handle_unknown_node(args)  # Handle messages to nodes that is unknown/dead
         else: 
             {
@@ -164,9 +165,10 @@ class node(object):
         content = args[1]
         address = args[2]
         if(content["ROLE"] == "NEW"):
-            #print("RA-MUTEX::INCOMING-NODE-TO-INIT")
+            print("RA-MUTEX::INCOMING-NODE-TO-INIT")
             self.init_lock.acquire()
             if(len(self.nodes) == 0): # Check if first in queue
+                print("len of nodes", len(self.nodes))
                 self.init_done = True
             self.acquire()
             message = Message()
@@ -184,12 +186,12 @@ class node(object):
             
             self.msg_sender((sender['IP'],sender['PORT']),send_to_new)
             self.release()
-            #print("RA-MUTEX::INIT-DONE")
+            print("RA-MUTEX::INIT-DONE")
             self.init_lock.release()
         elif content["ROLE"] == "NODE":
             self.nodes[content["NEWDATA"]["UNIQUENAME"]] = { 'IP': content["NEWDATA"]['IP'], 'PORT': content["NEWDATA"]['PORT']}
         elif content["ROLE"] == "SPONSOR":
-            #print("role sponsor")
+            print("role sponsor")
             self.init_status = content["STATUS"]
             if (self.init_status == "OK"):
                 self.nodes = content["NODESDATA"]
@@ -248,6 +250,7 @@ class node(object):
         sender = args[0]
         content = args[1]
         if (content["STATUS"]=="GET"):
+            print("content get")
             mess = Message(Message.TYPE.HIGHEST_SEQ_NUM,self.info,{"STATUS":"RESPONSE", "VALUE": self.highest_seq_num})
             self.send_message_to_node(sender["UNIQUENAME"],mess.prepare())
         elif (content["STATUS"]=="RESPONSE"):
@@ -273,6 +276,7 @@ class node(object):
             mess = Message(Message.TYPE.HIGHEST_SEQ_NUM, self.info,{"STATUS": "GET"})
             self.send_message_to_node(node, mess.prepare())
         self.listener_event.wait()
+        print(self.highest_seq_num)
         highest_num = -1
         for num in self.nodes_highest_seq_num:
             if self.nodes_highest_seq_num[num] > highest_num: highest_num = self.nodes_highest_seq_num[num]
@@ -294,10 +298,11 @@ class node(object):
         self.lock.acquire()
         self.requesting_cs = True
         print('critical section now true')
-        self.seq_num = int(self.highest_seq_num) + 1
+        self.seq_num = int(self.highest_seq_num)+ 1
         self.outstanding_reply_count = len(self.nodes)
-        
+
         if (self.outstanding_reply_count == 0):
+            print(self.outstanding_reply_count)
             self.listener_event.set()
         
         mess = Message(Message.TYPE.REQUEST,self.info,{"SEQNUM":self.seq_num})
@@ -310,7 +315,7 @@ class node(object):
                 self.send_message_to_node(node, mess.prepare())
             except socket.error as msg:
                 print("Error code: " + str(msg[0]) + ', Error message : ' + msg[1])
-        #print("RA-MUTEX::Waiting for nodes Reply")
+        print("RA-MUTEX::Waiting for nodes Reply")
         self.timeoutTimer.cancel()
         self.timeoutTimer = threading.Timer(10.0, self.check_waiting_nodes)
         self.timeoutTimer.start()
